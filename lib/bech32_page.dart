@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import 'package:dartcoin/dartcoin.dart';
 
+import 'backimg.dart';
+
 class Bech32Page extends StatefulWidget {
   const Bech32Page({super.key});
 
@@ -88,146 +90,148 @@ class _Bech32PageState extends State<Bech32Page> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Bech32 Encoder/Decoder')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Encode panel
-              Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Encode to Bech32',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Text('Network:'),
-                          const SizedBox(width: 8),
-                          DropdownButton<Network>(
-                            value: _network,
-                            items: [
-                              DropdownMenuItem(
-                                value: Network.mainnet,
-                                child: const Text('mainnet'),
-                              ),
-                              DropdownMenuItem(
-                                value: Network.testnet,
-                                child: const Text('testnet'),
-                              ),
-                              DropdownMenuItem(
-                                value: Network.regtest,
-                                child: const Text('regtest'),
-                              ),
-                            ],
-                            onChanged: (v) => setState(() => _network = v!),
-                          ),
-                          const SizedBox(width: 24),
-                          const Text('Script Version:'),
-                          const SizedBox(width: 8),
-                          DropdownButton<int>(
-                            value: _version,
-                            items: List.generate(
-                              3,
-                              (i) => DropdownMenuItem(
-                                value: i,
-                                child: Text(i.toString()),
-                              ),
+      body: BackImg(
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Encode panel
+                Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Encode to Bech32',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Text('Network:'),
+                            const SizedBox(width: 8),
+                            DropdownButton<Network>(
+                              value: _network,
+                              items: [
+                                DropdownMenuItem(
+                                  value: Network.mainnet,
+                                  child: const Text('mainnet'),
+                                ),
+                                DropdownMenuItem(
+                                  value: Network.testnet,
+                                  child: const Text('testnet'),
+                                ),
+                                DropdownMenuItem(
+                                  value: Network.regtest,
+                                  child: const Text('regtest'),
+                                ),
+                              ],
+                              onChanged: (v) => setState(() => _network = v!),
                             ),
-                            onChanged: (v) => setState(() => _version = v!),
+                            const SizedBox(width: 24),
+                            const Text('Script Version:'),
+                            const SizedBox(width: 8),
+                            DropdownButton<int>(
+                              value: _version,
+                              items: List.generate(
+                                3,
+                                (i) => DropdownMenuItem(
+                                  value: i,
+                                  child: Text(i.toString()),
+                                ),
+                              ),
+                              onChanged: (v) => setState(() => _version = v!),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          'Note: Version 0 scripts should be 20 or 32 bytes long. Version 1 scripts should be 32 bytes long.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(128),
                           ),
-                        ],
-                      ),
-                      Text(
-                        'Note: Version 0 scripts should be 20 or 32 bytes long. Version 1 scripts should be 32 bytes long.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withAlpha(128),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _encodeController,
-                        decoration: const InputDecoration(
-                          labelText: 'Input (Hex String)',
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _encodeController,
+                          decoration: const InputDecoration(
+                            labelText: 'Input (Hex String)',
+                          ),
+                          minLines: 3,
+                          maxLines: null, // Allow unlimited lines
                         ),
-                        minLines: 3,
-                        maxLines: null, // Allow unlimited lines
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: _encodeToBech32,
-                        icon: const Icon(Icons.arrow_downward),
-                        label: const Text('Convert to Bech32'),
-                      ),
-                      const SizedBox(height: 8),
-                      SelectableText(
-                        _encodeError,
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 16,
-                          color: _encodeError.startsWith('Error:')
-                              ? Colors.red
-                              : null,
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed: _encodeToBech32,
+                          icon: const Icon(Icons.arrow_downward),
+                          label: const Text('Convert to Bech32'),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        SelectableText(
+                          _encodeError,
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 16,
+                            color: _encodeError.startsWith('Error:')
+                                ? Colors.red
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              // Decode panel
-              Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Decode from Bech32',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _decodeController,
-                        decoration: const InputDecoration(
-                          labelText: 'Bech32 String',
+                const SizedBox(height: 24),
+                // Decode panel
+                Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Decode from Bech32',
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        minLines: 3,
-                        maxLines: null, // Allow unlimited lines
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: _decodeFromBech32,
-                        icon: const Icon(Icons.arrow_upward),
-                        label: const Text('Convert from Bech32'),
-                      ),
-                      const SizedBox(height: 8),
-                      SelectableText(
-                        _decodeError,
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 16,
-                          color: _decodeError.startsWith('Error:')
-                              ? Colors.red
-                              : null,
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _decodeController,
+                          decoration: const InputDecoration(
+                            labelText: 'Bech32 String',
+                          ),
+                          minLines: 3,
+                          maxLines: null, // Allow unlimited lines
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed: _decodeFromBech32,
+                          icon: const Icon(Icons.arrow_upward),
+                          label: const Text('Convert from Bech32'),
+                        ),
+                        const SizedBox(height: 8),
+                        SelectableText(
+                          _decodeError,
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 16,
+                            color: _decodeError.startsWith('Error:')
+                                ? Colors.red
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

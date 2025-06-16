@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 
 import 'config.dart';
+import 'backimg.dart';
 import 'base58_page.dart';
 import 'bech32_page.dart';
 import 'about_page.dart';
@@ -57,7 +58,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Dartcoin',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepOrange,
+          brightness: Brightness.dark,
+        ),
       ),
       routerConfig: _router,
     );
@@ -148,10 +152,10 @@ class _MyHomePageState extends State<MyHomePage> {
           ],
         ),
       ),
-      body: Center(
-        child: Column(
+      body: BackImg(
+        Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
+          children: [
             const Text(
               'A playground for learning about bitcoin. Do not use on mainnet.',
             ),
