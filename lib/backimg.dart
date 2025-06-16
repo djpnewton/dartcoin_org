@@ -55,7 +55,7 @@ class _BackImgState extends State<BackImg> {
         ),
 
         Container(decoration: BoxDecoration(color: Colors.black54)),
-        Expanded(child: widget.child),
+        widget.child,
       ],
     );
   }
