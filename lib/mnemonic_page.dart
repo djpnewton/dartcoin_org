@@ -1,9 +1,29 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:dartcoin/dartcoin.dart';
 
 import 'helper.dart';
 import 'backimg.dart';
+import 'loading_screen.dart';
+
+List<(String, String, String, String)> _computeAddresses(
+  (PrivateKey, Network, ScriptType, String) params,
+) {
+  final addresses = <(String, String, String, String)>[];
+  for (var i = 0; i < 5; i++) {
+    final derivationPath = '${params.$4}/$i';
+    final childKey = params.$1.childFromDerivationPath(derivationPath);
+    final address = childKey.address(network: params.$2, scriptType: params.$3);
+    addresses.add((
+      derivationPath,
+      address,
+      bytesToHex(childKey.publicKey),
+      Wif(params.$2, childKey.privateKey, true).toWifString(),
+    ));
+  }
+  return addresses.toList();
+}
 
 class MnemonicPage extends StatefulWidget {
   const MnemonicPage({super.key});
@@ -31,6 +51,8 @@ class _MnemonicPageState extends State<MnemonicPage>
   int _derivationPathCoinType = 1; // Default to Bitcoin Testnet
   int _derivationPathAccount = 0; // Default account
   int _derivationPathChange = 0; // Default to no
+
+  List<(String, String, String, String)> _addresses = [];
 
   void _generateMnemonic() {
     final bits = _mnemonicWordCount == 24 ? 256 : 128;
@@ -84,13 +106,34 @@ class _MnemonicPageState extends State<MnemonicPage>
   }
 
   Future<void> _updateDerived(String mnemonic) async {
-    _seed = await mnemonicToSeed(mnemonic);
-    final masterKey = PrivateKey.fromSeed(hexToBytes(_seed));
-    setState(() {
-      _seed = _seed;
-      _xprv = masterKey.xprv(network: _network);
-      _xpub = masterKey.xpub(network: _network);
-    });
+    LoadingScreen.instance().show(context: context, text: 'Loading..');
+    try {
+      _seed = await mnemonicToSeed(mnemonic);
+      final masterKey = PrivateKey.fromSeed(hexToBytes(_seed));
+      final scriptType = switch (_derivationPathPurpose) {
+        44 => ScriptType.p2pkh,
+        49 => ScriptType.p2shP2wpkh,
+        84 => ScriptType.p2wpkh,
+        _ => throw Exception('Unsupported derivation path purpose'),
+      };
+      final addresses = await compute(_computeAddresses, (
+        masterKey,
+        _network,
+        scriptType,
+        _derivationPath(),
+      ));
+
+      setState(() {
+        _seed = _seed;
+        _xprv = masterKey.xprv(network: _network);
+        _xpub = masterKey.xpub(network: _network);
+        _addresses = addresses;
+      });
+      LoadingScreen.instance().hide();
+    } catch (e) {
+      LoadingScreen.instance().hide();
+      rethrow;
+    }
   }
 
   void _updateDerivationPathTab(int index) {
@@ -103,6 +146,9 @@ class _MnemonicPageState extends State<MnemonicPage>
         _derivationPathPurpose = 49; // BIP 49
       } else if (index == 2) {
         _derivationPathPurpose = 84; // BIP 84
+      }
+      if (_mnemonic.isNotEmpty) {
+        _updateDerived(_mnemonic);
       }
     });
   }
@@ -158,6 +204,7 @@ class _MnemonicPageState extends State<MnemonicPage>
                 onChanged: (value) {
                   setState(() {
                     _derivationPathAccount = int.tryParse(value) ?? 0;
+                    _updateDerived(_mnemonic);
                   });
                 },
               ),
@@ -176,6 +223,7 @@ class _MnemonicPageState extends State<MnemonicPage>
                 onChanged: (value) {
                   setState(() {
                     _derivationPathChange = int.tryParse(value) ?? 0;
+                    _updateDerived(_mnemonic);
                   });
                 },
               ),
@@ -199,23 +247,6 @@ class _MnemonicPageState extends State<MnemonicPage>
   }
 
   Widget _derivedAddresses() {
-    final masterKey = PrivateKey.fromSeed(hexToBytes(_seed));
-    final scriptType = switch (_derivationPathPurpose) {
-      44 => ScriptType.p2pkh, // BIP 44
-      49 => ScriptType.p2shP2wpkh, // BIP 49
-      84 => ScriptType.p2wpkh, // BIP 84
-      _ => throw Exception('Unsupported derivation path purpose'),
-    };
-    final addresses = <(String, String, String, String)>[];
-    for (int i = 0; i < 5; i++) {
-      final derivationPath = _derivationPath(index: i);
-      final childKey = masterKey.childFromDerivationPath(derivationPath);
-      final addr = childKey.address(network: _network, scriptType: scriptType);
-      final pubKey = bytesToHex(childKey.publicKey);
-      final privKey = Wif(_network, childKey.privateKey, true).toWifString();
-      addresses.add((derivationPath, addr, pubKey, privKey));
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -250,7 +281,7 @@ class _MnemonicPageState extends State<MnemonicPage>
             ),
           ],
         ),
-        for (var address in addresses)
+        for (var address in _addresses)
           Row(
             children: [
               Expanded(
@@ -281,242 +312,252 @@ class _MnemonicPageState extends State<MnemonicPage>
       body: BackImg(
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.amber[800],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    '⚠️ Warning: Do not use mnemonics or seeds generated on the web for your bitcoin wallet. Only use for testnet!',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber[800],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        '⚠️ Warning: Do not use mnemonics or seeds generated on the web for your bitcoin wallet. Only use for testnet!',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Card(
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: DefaultTabController(
-                      length: 2,
-                      initialIndex: _tabIndex,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          TabBar(
-                            onTap: (i) => setState(() => _tabIndex = i),
-                            tabs: const [
-                              Tab(text: 'Generate'),
-                              Tab(text: 'Validate'),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          IndexedStack(
-                            index: _tabIndex,
+                    Card(
+                      elevation: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: DefaultTabController(
+                          length: 2,
+                          initialIndex: _tabIndex,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Generate Tab
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              TabBar(
+                                onTap: (i) => setState(() => _tabIndex = i),
+                                tabs: const [
+                                  Tab(text: 'Generate'),
+                                  Tab(text: 'Validate'),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              IndexedStack(
+                                index: _tabIndex,
                                 children: [
-                                  Row(
+                                  // Generate Tab
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      ElevatedButton.icon(
-                                        onPressed: _generateMnemonic,
-                                        icon: const Icon(Icons.casino),
-                                        label: const Text('Generate'),
-                                      ),
-                                      const Text('Words:'),
-                                      const SizedBox(width: 8),
-                                      DropdownButton<int>(
-                                        value: _mnemonicWordCount,
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: 12,
-                                            child: Text('12'),
+                                      Row(
+                                        children: [
+                                          ElevatedButton.icon(
+                                            onPressed: _generateMnemonic,
+                                            icon: const Icon(Icons.casino),
+                                            label: const Text('Generate'),
                                           ),
-                                          DropdownMenuItem(
-                                            value: 24,
-                                            child: Text('24'),
+                                          const Text('Words:'),
+                                          const SizedBox(width: 8),
+                                          DropdownButton<int>(
+                                            value: _mnemonicWordCount,
+                                            items: const [
+                                              DropdownMenuItem(
+                                                value: 12,
+                                                child: Text('12'),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: 24,
+                                                child: Text('24'),
+                                              ),
+                                            ],
+                                            onChanged: (v) => setState(
+                                              () => _mnemonicWordCount = v!,
+                                            ),
                                           ),
                                         ],
-                                        onChanged: (v) => setState(
-                                          () => _mnemonicWordCount = v!,
-                                        ),
                                       ),
+                                    ],
+                                  ),
+                                  // Validate Tab
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      TextField(
+                                        controller: _mnemonicController,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Enter mnemonic',
+                                        ),
+                                        minLines: 2,
+                                        maxLines: 3,
+                                        onChanged: _mnemonicControllerChanged,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      ElevatedButton.icon(
+                                        onPressed: _validateMnemonic,
+                                        icon: const Icon(Icons.check),
+                                        label: const Text('Validate'),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      if (_error.isNotEmpty)
+                                        Text(
+                                          _error,
+                                          style: const TextStyle(
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                      if (_mnemonic == 'Valid mnemonic!')
+                                        const Text(
+                                          'Mnemonic is valid!',
+                                          style: TextStyle(color: Colors.green),
+                                        ),
                                     ],
                                   ),
                                 ],
                               ),
-                              // Validate Tab
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  TextField(
-                                    controller: _mnemonicController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Enter mnemonic',
-                                    ),
-                                    minLines: 2,
-                                    maxLines: 3,
-                                    onChanged: _mnemonicControllerChanged,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  ElevatedButton.icon(
-                                    onPressed: _validateMnemonic,
-                                    icon: const Icon(Icons.check),
-                                    label: const Text('Validate'),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  if (_error.isNotEmpty)
-                                    Text(
-                                      _error,
-                                      style: const TextStyle(color: Colors.red),
-                                    ),
-                                  if (_mnemonic == 'Valid mnemonic!')
-                                    const Text(
-                                      'Mnemonic is valid!',
-                                      style: TextStyle(color: Colors.green),
-                                    ),
-                                ],
-                              ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                if (_mnemonic.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 16),
-                          const Text(
-                            'BIP 39 Mnemonic',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          SelectableText(
-                            _mnemonic,
-                            style: const TextStyle(fontFamily: 'monospace'),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'BIP 39 Seed',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          SelectableText(
-                            _seed,
-                            style: const TextStyle(fontFamily: 'monospace'),
-                          ),
-                          const Divider(height: 16),
-                          Row(
+                    if (_mnemonic.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Card(
+                        elevation: 2,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              const SizedBox(height: 16),
                               const Text(
-                                'Network:',
+                                'BIP 39 Mnemonic',
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
-                              const SizedBox(width: 8),
-                              DropdownButton<Network>(
-                                value: _network,
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: Network.mainnet,
-                                    child: Text('mainnet'),
+                              const SizedBox(height: 4),
+                              SelectableText(
+                                _mnemonic,
+                                style: const TextStyle(fontFamily: 'monospace'),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'BIP 39 Seed',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              SelectableText(
+                                _seed,
+                                style: const TextStyle(fontFamily: 'monospace'),
+                              ),
+                              const Divider(height: 16),
+                              Row(
+                                children: [
+                                  const Text(
+                                    'Network:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                  DropdownMenuItem(
-                                    value: Network.testnet,
-                                    child: Text('testnet'),
+                                  const SizedBox(width: 8),
+                                  DropdownButton<Network>(
+                                    value: _network,
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: Network.mainnet,
+                                        child: Text('mainnet'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: Network.testnet,
+                                        child: Text('testnet'),
+                                      ),
+                                    ],
+                                    onChanged: _updateNetwork,
                                   ),
                                 ],
-                                onChanged: _updateNetwork,
                               ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'BIP 32 Master Key',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              SelectableText(
+                                'XPRV: $_xprv',
+                                style: const TextStyle(fontFamily: 'monospace'),
+                              ),
+                              const SizedBox(height: 4),
+                              SelectableText(
+                                'XPUB: $_xpub',
+                                style: const TextStyle(fontFamily: 'monospace'),
+                              ),
+                              const Divider(height: 16),
+                              const Text(
+                                'Derivation Path',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              DefaultTabController(
+                                length: 3,
+                                initialIndex: _derivationPathTabIndex,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    TabBar(
+                                      onTap: _updateDerivationPathTab,
+                                      tabs: const [
+                                        Tab(text: 'BIP 44'),
+                                        Tab(text: 'BIP 49'),
+                                        Tab(text: 'BIP 84'),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    IndexedStack(
+                                      index: _derivationPathTabIndex,
+                                      children: [
+                                        // BIP 44 Tab
+                                        _derivationPathUI(),
+                                        // BIP 49 Tab
+                                        _derivationPathUI(),
+                                        // BIP 84 Tab
+                                        _derivationPathUI(),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Divider(height: 16),
+                              const Text(
+                                'Derived Addresses',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _derivedAddresses(),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'BIP 32 Master Key',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          SelectableText(
-                            'XPRV: $_xprv',
-                            style: const TextStyle(fontFamily: 'monospace'),
-                          ),
-                          const SizedBox(height: 4),
-                          SelectableText(
-                            'XPUB: $_xpub',
-                            style: const TextStyle(fontFamily: 'monospace'),
-                          ),
-                          const Divider(height: 16),
-                          const Text(
-                            'Derivation Path',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          DefaultTabController(
-                            length: 3,
-                            initialIndex: _derivationPathTabIndex,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                TabBar(
-                                  onTap: _updateDerivationPathTab,
-                                  tabs: const [
-                                    Tab(text: 'BIP 44'),
-                                    Tab(text: 'BIP 49'),
-                                    Tab(text: 'BIP 84'),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                IndexedStack(
-                                  index: _derivationPathTabIndex,
-                                  children: [
-                                    // BIP 44 Tab
-                                    _derivationPathUI(),
-                                    // BIP 49 Tab
-                                    _derivationPathUI(),
-                                    // BIP 84 Tab
-                                    _derivationPathUI(),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Divider(height: 16),
-                          const Text(
-                            'Derived Addresses',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _derivedAddresses(),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
