@@ -7,6 +7,7 @@ import 'config.dart';
 import 'backimg.dart';
 import 'base58_page.dart';
 import 'bech32_page.dart';
+import 'mnemonic_page.dart';
 import 'about_page.dart';
 
 final log = Logger('mainlogger');
@@ -24,14 +25,19 @@ final _router = GoRouter(
           builder: (context, state) => Base58Page(),
         ),
         GoRoute(
-          name: AppPage.about.name,
-          path: '/about',
-          builder: (context, state) => const AboutPage(),
-        ),
-        GoRoute(
           name: AppPage.bech32.name,
           path: '/bech32',
           builder: (context, state) => Bech32Page(),
+        ),
+        GoRoute(
+          name: AppPage.mnemonic.name,
+          path: '/mnemonic',
+          builder: (context, state) => const MnemonicPage(),
+        ),
+        GoRoute(
+          name: AppPage.about.name,
+          path: '/about',
+          builder: (context, state) => const AboutPage(),
         ),
       ],
     ),
@@ -90,6 +96,9 @@ class _MyHomePageState extends State<MyHomePage> {
         case AppPage.bech32:
           log.info('Navigating to Bech32');
           context.goNamed(AppPage.bech32.name);
+        case AppPage.mnemonic:
+          log.info('Navigating to Mnemonic');
+          context.goNamed(AppPage.mnemonic.name);
         case AppPage.about:
           log.info('Navigating to About');
           context.goNamed(AppPage.about.name);
@@ -135,14 +144,19 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.code),
+              leading: const Icon(Icons.qr_code),
               title: Text(pageTitle(AppPage.base58)),
               onTap: () => _navigateToPage(AppPage.base58),
             ),
             ListTile(
-              leading: const Icon(Icons.beach_access),
+              leading: const Icon(Icons.qr_code),
               title: Text(pageTitle(AppPage.bech32)),
               onTap: () => _navigateToPage(AppPage.bech32),
+            ),
+            ListTile(
+              leading: const Icon(Icons.key),
+              title: Text(pageTitle(AppPage.mnemonic)),
+              onTap: () => _navigateToPage(AppPage.mnemonic),
             ),
             ListTile(
               leading: const Icon(Icons.info),
@@ -153,13 +167,10 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       body: BackImg(
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'A playground for learning about bitcoin. Do not use on mainnet.',
-            ),
-          ],
+        Center(
+          child: const Text(
+            'A playground for learning about bitcoin. Do not use on mainnet.',
+          ),
         ),
       ),
     );

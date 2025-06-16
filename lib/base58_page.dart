@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:dartcoin/dartcoin.dart';
 
 import 'backimg.dart';
+import 'helper.dart';
 
 class Base58Page extends StatefulWidget {
   const Base58Page({super.key});
@@ -39,10 +40,7 @@ class _Base58PageState extends State<Base58Page> {
           result = base58Encode(Uint8List.fromList(bytes));
         }
         _decodeController.text = result;
-        var snackBar = SnackBar(
-          content: Text('Encoded ${bytes.length} bytes to Base58: $result'),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        snackbar(context, 'Encoded ${bytes.length} bytes to Base58: $result');
       });
     } catch (e) {
       setState(() {
@@ -70,10 +68,7 @@ class _Base58PageState extends State<Base58Page> {
           result = bytesToHex(Uint8List.fromList(bytes));
         }
         _encodeController.text = result;
-        var snackBar = SnackBar(
-          content: Text('Decoded ${bytes.length} bytes to: $result'),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        snackbar(context, 'Decoded ${bytes.length} bytes to: $result');
       });
     } catch (e) {
       setState(() {

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:dartcoin_org/helper.dart';
 import 'package:flutter/material.dart';
 
 import 'package:dartcoin/dartcoin.dart';
@@ -45,10 +46,7 @@ class _Bech32PageState extends State<Bech32Page> {
           network: _network,
         ); // Pass version
         _decodeController.text = result;
-        var snackBar = SnackBar(
-          content: Text('Encoded ${bytes.length} bytes to Bech32: $result'),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        snackbar(context, 'Encoded ${bytes.length} bytes to Bech32: $result');
       });
     } catch (e) {
       setState(() {
@@ -68,10 +66,7 @@ class _Bech32PageState extends State<Bech32Page> {
         ); // Skip the version and length bytes
         final result = bytesToHex(payload);
         _encodeController.text = result;
-        var snackBar = SnackBar(
-          content: Text('Decoded ${payload.length} bytes to: $result'),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        snackbar(context, 'Decoded ${payload.length} bytes to: $result');
         // Update the version based on the first byte
         _version = bech32.scriptPubKey[0] == 0
             ? 0
