@@ -43,7 +43,8 @@ dependencies:
       url: https://github.com/djpnewton/dartcoin.git
       ref: 79b7c1a
     #path: ../dartcoin
-
+  isolate_manager: ^6.0.0+2
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -54,6 +55,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  isolate_manager_generator: ^0.0.13
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
