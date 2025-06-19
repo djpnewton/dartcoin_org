@@ -7,13 +7,20 @@ import 'helper.dart';
 import 'backimg.dart';
 import 'loading_screen.dart';
 
+(String, PrivateKey) _computeMasterKey(String mnemonic) {
+  final seed = mnemonicToSeed(mnemonic);
+  final masterKey = PrivateKey.fromSeed(hexToBytes(seed));
+  return (seed, masterKey);
+}
+
 List<(String, String, String, String)> _computeAddresses(
   (PrivateKey, Network, ScriptType, String) params,
 ) {
+  final key = params.$1.childFromDerivationPath(params.$4);
   final addresses = <(String, String, String, String)>[];
   for (var i = 0; i < 5; i++) {
     final derivationPath = '${params.$4}/$i';
-    final childKey = params.$1.childFromDerivationPath(derivationPath);
+    final childKey = key.childPrivateKey(i, hardened: false);
     final address = childKey.address(network: params.$2, scriptType: params.$3);
     addresses.add((
       derivationPath,
@@ -108,14 +115,14 @@ class _MnemonicPageState extends State<MnemonicPage>
   Future<void> _updateDerived(String mnemonic) async {
     LoadingScreen.instance().show(context: context, text: 'Loading..');
     try {
-      _seed = await mnemonicToSeed(mnemonic);
-      final masterKey = PrivateKey.fromSeed(hexToBytes(_seed));
       final scriptType = switch (_derivationPathPurpose) {
         44 => ScriptType.p2pkh,
         49 => ScriptType.p2shP2wpkh,
         84 => ScriptType.p2wpkh,
         _ => throw Exception('Unsupported derivation path purpose'),
       };
+      final (seed, masterKey) = await compute(_computeMasterKey, mnemonic);
+      _seed = seed;
       final addresses = await compute(_computeAddresses, (
         masterKey,
         _network,
