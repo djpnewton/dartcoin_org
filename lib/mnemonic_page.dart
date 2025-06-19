@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:dartcoin/dartcoin.dart';
@@ -6,31 +5,7 @@ import 'package:dartcoin/dartcoin.dart';
 import 'helper.dart';
 import 'backimg.dart';
 import 'loading_screen.dart';
-
-(String, PrivateKey) _computeMasterKey(String mnemonic) {
-  final seed = mnemonicToSeed(mnemonic);
-  final masterKey = PrivateKey.fromSeed(hexToBytes(seed));
-  return (seed, masterKey);
-}
-
-List<(String, String, String, String)> _computeAddresses(
-  (PrivateKey, Network, ScriptType, String) params,
-) {
-  final key = params.$1.childFromDerivationPath(params.$4);
-  final addresses = <(String, String, String, String)>[];
-  for (var i = 0; i < 5; i++) {
-    final derivationPath = '${params.$4}/$i';
-    final childKey = key.childPrivateKey(i, hardened: false);
-    final address = childKey.address(network: params.$2, scriptType: params.$3);
-    addresses.add((
-      derivationPath,
-      address,
-      bytesToHex(childKey.publicKey),
-      Wif(params.$2, childKey.privateKey, true).toWifString(),
-    ));
-  }
-  return addresses.toList();
-}
+import 'crypto_worker.dart';
 
 class MnemonicPage extends StatefulWidget {
   const MnemonicPage({super.key});
@@ -59,7 +34,15 @@ class _MnemonicPageState extends State<MnemonicPage>
   int _derivationPathAccount = 0; // Default account
   int _derivationPathChange = 0; // Default to no
 
-  List<(String, String, String, String)> _addresses = [];
+  List<Address> _addresses = [];
+
+  final CryptoWorker _cryptoWorker = CryptoWorker();
+
+  @override
+  void dispose() {
+    _cryptoWorker.stop();
+    super.dispose();
+  }
 
   void _generateMnemonic() {
     final bits = _mnemonicWordCount == 24 ? 256 : 128;
@@ -121,14 +104,14 @@ class _MnemonicPageState extends State<MnemonicPage>
         84 => ScriptType.p2wpkh,
         _ => throw Exception('Unsupported derivation path purpose'),
       };
-      final (seed, masterKey) = await compute(_computeMasterKey, mnemonic);
-      _seed = seed;
-      final addresses = await compute(_computeAddresses, (
+      _seed = await _cryptoWorker.seed(mnemonic);
+      final masterKey = await _cryptoWorker.masterKey(_seed);
+      final addresses = await _cryptoWorker.addresses(
         masterKey,
         _network,
         scriptType,
         _derivationPath(),
-      ));
+      );
 
       setState(() {
         _seed = _seed;
@@ -293,19 +276,22 @@ class _MnemonicPageState extends State<MnemonicPage>
             children: [
               Expanded(
                 child: SelectableText(
-                  address.$1,
+                  address.derivationPath,
                   style: TextStyle(color: Colors.grey),
                 ),
               ), // Derivation Path
-              Expanded(flex: 2, child: SelectableText(address.$2)), // Address
+              Expanded(
+                flex: 2,
+                child: SelectableText(address.address),
+              ), // Address
               Expanded(
                 flex: 3,
                 child: SelectableText(
-                  address.$3,
+                  address.publicKey,
                   style: TextStyle(color: Colors.grey),
                 ),
               ), // Pubkey
-              Expanded(flex: 3, child: SelectableText(address.$4)), // WIF
+              Expanded(flex: 3, child: SelectableText(address.wif)), // WIF
             ],
           ),
       ],
