@@ -41,7 +41,7 @@ dependencies:
   dartcoin:
     git:
       url: https://github.com/djpnewton/dartcoin.git
-      ref: d060821
+      ref: 79b7c1a
     #path: ../dartcoin
 
 dev_dependencies:
