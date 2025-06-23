@@ -9,6 +9,7 @@ import 'base58_page.dart';
 import 'bech32_page.dart';
 import 'mnemonic_page.dart';
 import 'about_page.dart';
+import 'sign_verify_page.dart';
 
 final log = Logger('mainlogger');
 
@@ -33,6 +34,11 @@ final _router = GoRouter(
           name: AppPage.mnemonic.name,
           path: '/mnemonic',
           builder: (context, state) => const MnemonicPage(),
+        ),
+        GoRoute(
+          name: AppPage.signverify.name,
+          path: '/signverify',
+          builder: (context, state) => const SignVerifyPage(),
         ),
         GoRoute(
           name: AppPage.about.name,
@@ -99,6 +105,9 @@ class _MyHomePageState extends State<MyHomePage> {
         case AppPage.mnemonic:
           log.info('Navigating to Mnemonic');
           context.goNamed(AppPage.mnemonic.name);
+        case AppPage.signverify:
+          log.info('Navigating to Sign/Verify');
+          context.goNamed(AppPage.signverify.name);
         case AppPage.about:
           log.info('Navigating to About');
           context.goNamed(AppPage.about.name);
@@ -157,6 +166,11 @@ class _MyHomePageState extends State<MyHomePage> {
               leading: const Icon(Icons.key),
               title: Text(pageTitle(AppPage.mnemonic)),
               onTap: () => _navigateToPage(AppPage.mnemonic),
+            ),
+            ListTile(
+              leading: const Icon(Icons.verified_user),
+              title: Text(pageTitle(AppPage.signverify)),
+              onTap: () => _navigateToPage(AppPage.signverify),
             ),
             ListTile(
               leading: const Icon(Icons.info),
