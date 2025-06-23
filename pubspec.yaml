@@ -41,7 +41,7 @@ dependencies:
   dartcoin:
     git:
       url: https://github.com/djpnewton/dartcoin.git
-      ref: 32f52f3
+      ref: c712efb
     #path: ../dartcoin
   isolate_manager: ^6.0.0+2
   
