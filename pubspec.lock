@@ -98,8 +98,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "32f52f3"
-      resolved-ref: "32f52f38ab71637cdcd98d8ffa64c4a31cb38ed8"
+      ref: c712efb
+      resolved-ref: c712efb720a4229a2048b82a0256f62f8d6c7160
       url: "https://github.com/djpnewton/dartcoin.git"
     source: git
     version: "0.1.0"
