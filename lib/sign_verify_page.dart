@@ -64,9 +64,9 @@ class _SignVerifyPageState extends State<SignVerifyPage>
         _address = bsm.address;
         _signature = bsm.signature;
       } else {
-        DERSignedMessage sig;
+        DERSignature sig;
         try {
-          sig = derSign(pk, msg);
+          sig = derSignMessage(pk, msg);
         } catch (e) {
           snackbar(context, 'Error signing message: $e');
           return;
@@ -124,7 +124,7 @@ class _SignVerifyPageState extends State<SignVerifyPage>
         final publicKey = PublicKey.fromPublicKey(hexToBytes(publicKeyHex));
         bool result;
         try {
-          result = derVerify(publicKey, msg, sigBytes);
+          result = derVerifyMessage(publicKey, msg, sigBytes);
         } catch (e) {
           snackbar(context, 'Error verifying signature: $e');
           return;
