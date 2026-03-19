@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'config.dart';
 import 'backimg.dart';
 import 'base58_page.dart';
+import 'explorer.dart';
 import 'bech32_page.dart';
 import 'mnemonic_page.dart';
 import 'about_page.dart';
@@ -181,9 +182,24 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       body: BackImg(
-        Center(
-          child: const Text(
-            'A playground for learning about bitcoin. Do not use on mainnet.',
+        SingleChildScrollView(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 32),
+                  const Text(
+                    'A playground for learning about bitcoin. Do not use on mainnet.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  const BlockchainSearch(),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
           ),
         ),
       ),
